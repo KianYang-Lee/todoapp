@@ -1,0 +1,7 @@
+PUT http://localhost:7999/tasks/1
+Content-Type: application/json
+
+{
+  "description": "Take a bath",
+  "priority": 1
+}

@@ -1,0 +1,15 @@
+label {
+  font-weight: 500;
+}
+
+.new-form, .to-dos {
+  margin-top: 50px;
+}
+
+.table {
+  width: 40%;
+}
+
+#title {
+  color: rgb(78, 204, 126);
+}

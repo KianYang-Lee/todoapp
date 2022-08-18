@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do App</title>
+  <script src="https://unpkg.com/vue@3"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app" class="container-fluid">
+      <div class="row justify-content-center">
+      <h1 id="title" th:text="${myName}">TO-DO APP</h1>
+      </div>
+      <div class="row justify-content-center">
+        <h2>My List of To-dos</h2>
+      </div>
+      <div class="row justify-content-center to-dos">
+        <table class="table table-sm table-striped table-borderless">
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">DESCRIPTION</th>
+              <th scope="col">PRIORITY</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="task in tasks">
+              <td scope="row">{{ task.id }}</td>
+              <td scope="row" v-if="selectedTaskId !== task.id">{{ task.description }}</td>
+              <td scope="row" v-else><input placeholder="New description" id="new-description-input" name="new-description" v-model="selectedDescription"></td>
+              <td scope="row" v-if="selectedTaskId !== task.id">{{ task.priority }}</td>
+              <td scope="row" v-else><input placeholder="New priority" v-model="selectedPriority"></td>
+              <td scope="row" v-if="selectedTaskId !== task.id"><button type="button" class="btn btn-primary btn-sm"  @click="selectTask(task.id, task.description, task.priority)">Update</button></td>
+              <td scope="row" v-else><button type="button" class="btn btn-warning btn-sm" @click="updateTask(task.id, selectedDescription, selectedPriority)">Confirm</button></td>
+              <td scope="row" ><button type="button" class="btn btn-danger btn-sm" @click="deleteTask(task.id)">Delete</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="row justify-content-center new-form">
+        <form @submit="submitForm" ref="form">
+          <div class="form-group row">
+            <label for="description-input" class="col-form-label col-sm-4">Description: </label>
+            <div class="col-sm-6">
+              <input type="text" name="description" id="description-input" v-model="description" placeholder="Description of to-do">
+            </div>
+          </div>
+          <div class="form-group row">
+            <label for="priority-input" class="col-form-label col-sm-4">Priority: </label>
+            <div class="col-sm-6">
+              <input type="text" name="priority" id="priority-input" v-model="priority" placeholder="Priority of task">
+            </div>
+          </div>
+          <div class="row justify-content-center">
+            <button type="submit" class="btn btn-success" :disabled="priority === '' | description === ''">Create</button>
+          </div>
+        </form>
+      </div>
+  </div>
+</body>
+</html>
+
+<script th:inline="javascript">
+  const { createApp } = Vue;
+  createApp({
+    data() {
+      return {
+        tasks: [],
+        priority: "",
+        description: "",
+        selectedTaskId: null,
+        selectedDescription: "",
+        selectedPriority: "",
+      }
+    },
+    methods: {
+      async getTasks() {
+        const { data } = await axios.get("/tasks");
+        this.sortTasks(data);
+      },
+      async submitForm(e) {
+        e.preventDefault();
+        const data = {priority: this.priority, description: this.description};
+        const res = await axios.post("/tasks", data);
+        if (res.status !== 200) {
+          alert("Unable to post data");
+        }
+        const newTasks = [...this.tasks, res.data];
+        this.sortTasks(newTasks);
+        this.priority = "";
+        this.description = "";
+        // console.log(this.tasks);
+        // this.sortTasks(this.tasks);
+        // If using formData
+        // let form = new FormData();
+        // form.append(e.target.elements.description.value, e.target.elements.priority.value);
+        // const res = await axios.post("/tasks", form)
+      },
+      selectTask(taskId, taskDescription, taskPriority) {
+        this.selectedTaskId = taskId;
+        this.selectedDescription = taskDescription;
+        this.selectedPriority = taskPriority;
+      },
+      sortTasks(tasks) {
+        const sortedTasks = tasks.sort((a,b) => a.priority - b.priority);
+        this.tasks = sortedTasks;
+      },
+      async updateTask(id, description, priority) {
+        const body = {description, priority};
+        const res = await axios.put(`/tasks/${id}`, body)
+        if (res.status !== 200) {
+          alert("Unable to update task");
+        }
+        const updatedTasks = this.tasks.map(task => task.id === res.data.id ? res.data : task);
+        this.sortTasks(updatedTasks);
+        this.selectedTaskId = null;
+      },
+      async deleteTask(id) {
+        const res = await axios.delete(`/tasks/${id}`);
+        if (res.status === 200) {
+          const remainingTasks = this.tasks.filter(task => task.id !== id);
+          this.sortTasks(remainingTasks);
+        }
+      }
+    },
+    mounted() {
+      this.getTasks();
+    }
+  }).mount('#app')
+</script>
